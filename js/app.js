@@ -41,7 +41,7 @@ function handleClick(e) {
     document.getElementById('crumbText').innerHTML = '<span class="crumb-current">' + PORTFOLIO[node.id].label + '</span>';
     buildSubGraph(node.id);
   } else if (node.type === 'leaf' && node.route) {
-    window.location.hash = node.route;
+    window.location.href = node.route;
   } else if (node.type === 'leaf' && node.detail) {
     showDetail(node.detail);
   }
@@ -69,24 +69,6 @@ function goBack() {
   label.querySelector('.name').textContent = 'Manav Jain';
   label.querySelector('.tagline').style.display = '';
   buildMainGraph();
-}
-
-function showWriteup() {
-  document.getElementById('writeup').classList.add('open');
-  document.body.classList.add('writeup-active');
-}
-
-function hideWriteup() {
-  document.getElementById('writeup').classList.remove('open');
-  document.body.classList.remove('writeup-active');
-}
-
-function handleHashChange() {
-  if (window.location.hash === '#/projects/skinsure') {
-    showWriteup();
-  } else {
-    hideWriteup();
-  }
 }
 
 function tick() { simulate(); draw(); requestAnimationFrame(tick); }
@@ -128,19 +110,12 @@ function init() {
   document.getElementById('backBtn').addEventListener('click', goBack);
   document.getElementById('detailClose').addEventListener('click', closeDetail);
   document.getElementById('skipBtn').addEventListener('click', finishIntro);
-  document.getElementById('writeupBack').addEventListener('click', function(e) {
-    e.preventDefault();
-    window.location.hash = '';
-    goBack();
-  });
-  window.addEventListener('hashchange', handleHashChange);
 
   document.getElementById('intro').classList.add('hidden');
   document.getElementById('centerLabel').classList.add('visible');
   document.getElementById('socials').classList.add('visible');
   buildMainGraph();
   tick();
-  handleHashChange();
 }
 
 if ('ontouchstart' in window) {

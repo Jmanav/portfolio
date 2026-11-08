@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CHAKRA &mdash; Manav Jain</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap">
+  <link rel="stylesheet" href="../css/project.css">
+</head>
+<body>
+
+<div class="writeup-inner">
+  <a href="../index.html" class="writeup-back">&#8592; Back to portfolio</a>
+
+  <header class="writeup-header">
+    <h1>CHAKRA</h1>
+    <p class="writeup-subtitle">Critical Infra Risk Engine &mdash; a risk-scoring platform for Indian smart-city critical infrastructure.</p>
+  </header>
+
+  <section class="writeup-section">
+    <h2>Overview</h2>
+    <p>A risk-scoring platform for Indian smart-city critical infrastructure (power, water, health, telecom, traffic). Given a synthetic 90-asset city, it computes which compromised asset would do the most damage, runs a 24h cascading-failure simulation, ranks fixes by risk removed per hour of effort, and replays real ICS telemetry (HAI, MSU/ORNL) through trained models to move live risk scores.</p>
+    <p>A pure-Python Monte Carlo risk engine (test-oracle validated, zero ML imports by architectural rule) is fed likelihood ratios from three independently gated models &mdash; IsolationForest anomaly detection, a RandomForest attack-vs-fault classifier, and an XGBoost CVE-exploitability model &mdash; each only used if it clears a precommitted held-out metric gate. Every number the API returns carries a provenance badge (FEED / MODEL / GRAPH / ASSUMPTION / SYNTHETIC), enforced by a middleware test so no unbadged number can leave the system &mdash; the project is structurally incapable of showing a fabricated or LLM-hallucinated number as data. An optional LLM narrates results but never computes them; any number it states that isn't in the source facts is stripped before display.</p>
+    <p>Shipped as a single offline-capable Docker container (boots and serves with <code>--network none</code>) with a React/TypeScript dashboard, FastAPI backend, and CI enforcing architecture boundaries, mypy --strict, and determinism on every commit.</p>
+    <p><a href="https://dvd1906-cityrisk.hf.space" target="_blank" rel="noopener noreferrer">Live demo &rarr;</a></p>
+  </section>
+
+  <section class="writeup-section">
+    <h2>Stack</h2>
+    <p class="tag-row">
+      <span class="tag">FastAPI</span>
+      <span class="tag">Monte Carlo Simulation</span>
+      <span class="tag">XGBoost / scikit-learn</span>
+      <span class="tag">React + TypeScript</span>
+      <span class="tag">Docker</span>
+    </p>
+  </section>
+</div>
+
+</body>
+</html>

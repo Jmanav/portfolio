@@ -4,21 +4,13 @@ var PORTFOLIO = {
     label: 'Projects', color: RED,
     children: [
       { id: 'p1', label: 'SkinSure',
-        route: '#/projects/skinsure'
+        route: 'projects/skinsure.html'
       },
       { id: 'p2', label: 'CHAKRA',
-        detail: {
-          label: 'Project', title: 'CHAKRA — Critical Infra Risk Engine', color: RED,
-          body: '<p>A risk-scoring platform for Indian smart-city critical infrastructure (power, water, health, telecom, traffic). Given a synthetic 90-asset city, it computes which compromised asset would do the most damage, runs a 24h cascading-failure simulation, ranks fixes by risk removed per hour of effort, and replays real ICS telemetry (HAI, MSU/ORNL) through trained models to move live risk scores.</p>'
-              + '<p>A pure-Python Monte Carlo risk engine (test-oracle validated, zero ML imports by architectural rule) is fed likelihood ratios from three independently gated models — IsolationForest anomaly detection, a RandomForest attack-vs-fault classifier, and an XGBoost CVE-exploitability model — each only used if it clears a precommitted held-out metric gate. Every number the API returns carries a provenance badge (FEED / MODEL / GRAPH / ASSUMPTION / SYNTHETIC), enforced by a middleware test so no unbadged number can leave the system — the project is structurally incapable of showing a fabricated or LLM-hallucinated number as data. An optional LLM narrates results but never computes them; any number it states that isn\'t in the source facts is stripped before display.</p>'
-              + '<p>Shipped as a single offline-capable Docker container (boots and serves with <code>--network none</code>) with a React/TypeScript dashboard, FastAPI backend, and CI enforcing architecture boundaries, mypy --strict, and determinism on every commit.</p>'
-              + '<p><a href="https://dvd1906-cityrisk.hf.space" target="_blank" rel="noopener noreferrer">Live demo &rarr;</a></p>',
-          tags: ['FastAPI', 'Monte Carlo Simulation', 'XGBoost / scikit-learn', 'React + TypeScript', 'Docker']
-        }
+        route: 'projects/chakra.html'
       },
       { id: 'p3', label: 'VidyaAI',
-        detail: { label: 'Project', title: '[YOUR PROJECT NAME]', color: RED,
-          body: '<p>[YOUR PROJECT DESCRIPTION]</p>', tags: ['[TAG 1]', '[TAG 2]', '[TAG 3]'] }
+        route: 'projects/vidyaai.html'
       }
     ]
   },

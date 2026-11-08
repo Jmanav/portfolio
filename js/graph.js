@@ -30,7 +30,7 @@ function buildMainGraph() {
       id: key, label: PORTFOLIO[key].label,
       x: tx + (Math.random() - 0.5) * 15,
       y: ty + (Math.random() - 0.5) * 15,
-      vx: 0, vy: 0, r: 26,
+      vx: 0, vy: 0, r: 22,
       color: RED, type: 'category',
       targetX: tx, targetY: ty
     });
@@ -64,7 +64,7 @@ function buildSubGraph(catKey) {
       id: child.id, label: child.label,
       x: tx + (Math.random() - 0.5) * 15,
       y: ty + (Math.random() - 0.5) * 15,
-      vx: 0, vy: 0, r: 18,
+      vx: 0, vy: 0, r: 15,
       color: RED, type: 'leaf', detail: child.detail, route: child.route,
       targetX: tx, targetY: ty
     });

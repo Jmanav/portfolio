@@ -219,24 +219,6 @@ html { height: 100%; }
 }
 #tooltip.visible { opacity: 1; }
 
-#writeup {
-  position: fixed; inset: 0;
-  z-index: 110;
-  background: var(--bg);
-  overflow-y: auto;
-  display: none;
-  cursor: auto;
-}
-#writeup.open { display: block; }
-body.writeup-active { overflow: auto; }
-body.writeup-active #graphCanvas,
-body.writeup-active #neuronCursor,
-body.writeup-active #cursorLines,
-body.writeup-active #centerLabel,
-body.writeup-active #socials,
-body.writeup-active #nav,
-body.writeup-active #tooltip { display: none; }
-
 .writeup-inner {
   max-width: 720px;
   margin: 0 auto;

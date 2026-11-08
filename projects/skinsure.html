@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkinSure &mdash; Manav Jain</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap">
+  <link rel="stylesheet" href="../css/project.css">
+</head>
+<body>
+
+<div class="writeup-inner">
+  <a href="../index.html" class="writeup-back">&#8592; Back to portfolio</a>
+
+  <header class="writeup-header">
+    <h1>SkinSure</h1>
+    <p class="writeup-subtitle">Clinical decision-support API that screens photos of skin lesions for Fitzpatrick IV&ndash;VI (Indian) skin tones &mdash; built, tested, and shipped as a FastAPI service with a 3-model ensemble, Grad-CAM explainability, deterministic safety overrides, and an observability layer, not just a trained classifier.</p>
+  </header>
+
+  <section class="writeup-section">
+    <h2>Pipeline Stages</h2>
+
+    <h3>1. Ingestion &amp; gating</h3>
+    <ul>
+      <li>Fitzpatrick IV&ndash;VI type enforced at the Pydantic schema boundary (<code>api/schemas/patient.py</code>) &mdash; rejects out-of-scope skin tones before any model runs</li>
+      <li>Quality gate rejects images under 200px short-side or near-featureless; blur threshold tuned per-class from a 1,500-image sample to avoid disproportionately rejecting BCC/Melanoma photos</li>
+    </ul>
+
+    <h3>2. Preprocessing</h3>
+    <ul>
+      <li>Modular pipeline (hair removal, artifact inpainting, color normalization) with every pixel-changing step gated off by default, because the models were trained on resize + normalization only</li>
+      <li>Each optional step is independently toggleable via config rather than hardcoded, so the pipeline can be re-tuned without touching inference code</li>
+    </ul>
+
+    <h3>3. Core system &mdash; ensemble inference</h3>
+    <ul>
+      <li>Weighted-average ensemble of EfficientNet-B1, ConvNeXt-Tiny, and Swin-Tiny, each contributing a different inductive bias (texture / lighting invariance / global context)</li>
+      <li>No fallback-checkpoint path by design &mdash; a missing model weight raises an error instead of silently degrading to a stale or mismatched generation</li>
+    </ul>
+
+    <h3>4. Explainability &amp; safety triage</h3>
+    <ul>
+      <li>Grad-CAM heatmaps per backbone, chosen over SHAP for the live path on latency (~5s vs. minutes on CPU for patch-based methods) and native spatial-map output</li>
+      <li>Deterministic Python rules sit downstream of the LLM-generated clinical summary and can only escalate or block severity (e.g., melanoma at moderate+ confidence &rarr; forced &ldquo;urgent&rdquo;) &mdash; the LLM never gets the final word on urgency</li>
+    </ul>
+
+    <h3>5. Output / delivery</h3>
+    <ul>
+      <li>LLM (Claude Haiku) turns model output into a structured clinical summary, constrained by a Pydantic schema with a validator enforcing <code>urgent &rarr; immediate_referral</code> at the data layer as a second safety check</li>
+      <li>Cost-accounting module prices every LLM call against a rate table, and any script that spends money is hard-gated behind an explicit env var + <code>--max-usd</code> flag with no default</li>
+    </ul>
+
+    <h3>6. Observability &amp; deployment</h3>
+    <ul>
+      <li>OpenTelemetry tracing is optional-by-design: the app boots and serves with the telemetry stack entirely absent, verified by import-blocking the dependency in tests</li>
+      <li>PII redaction is allowlist-based (not blocklist) &mdash; patient name is structurally excluded from traces, patient ID is salted-HMAC&rsquo;d, images reduce to hash + dimensions</li>
+    </ul>
+  </section>
+
+  <section class="writeup-section">
+    <h2>Architecture</h2>
+    <p>FastAPI orchestrator (<code>run_screening</code>) chains quality gate &rarr; ensemble &rarr; Grad-CAM explainer &rarr; LLM summarizer &rarr; severity triage, emitting a decision span at each stage for audit.</p>
+    <div class="writeup-figure">
+      <img src="skinsure-architecture.png" alt="SkinSure pipeline architecture diagram: Input/Ingestion, Preprocessing, Core Inference (3-model ensemble), Explainability Layer, Clinical Reasoning &amp; Safety, and Output/Delivery, with an optional Observability layer spanning all stages.">
+    </div>
+  </section>
+
+  <section class="writeup-section">
+    <h2>Tech Stack</h2>
+    <ul>
+      <li><strong>Language:</strong> Python 3.10+</li>
+      <li><strong>API / serving:</strong> FastAPI, Uvicorn, Pydantic v2</li>
+      <li><strong>ML:</strong> PyTorch, timm (EfficientNet-B1, ConvNeXt-Tiny, Swin-Tiny)</li>
+      <li><strong>Explainability:</strong> Grad-CAM (custom per-backbone hooks)</li>
+      <li><strong>LLM integration:</strong> Anthropic Claude (async SDK), prompt-based clinical reasoning with schema-validated output</li>
+      <li><strong>Observability:</strong> OpenTelemetry (optional extra), structured tracing, PII redaction</li>
+      <li><strong>Config:</strong> YAML + <code>pydantic-settings</code></li>
+      <li><strong>Testing:</strong> pytest, 24 test files (unit, integration, fairness), network-blocked test runs, fake LLM clients</li>
+      <li><strong>Image processing:</strong> OpenCV, Pillow</li>
+    </ul>
+  </section>
+
+  <section class="writeup-section">
+    <h2>Limitations</h2>
+    <ul>
+      <li><strong>Test-set contamination was found and corrected, not assumed absent.</strong> The original evaluation set had ~22% near-duplicate overlap with training data, caught via perceptual hashing and removed before reporting metrics. That method catches near-identical duplicates, not subtler leakage (e.g. the same lesion photographed from a different angle), so residual leakage risk isn&rsquo;t fully ruled out &mdash; and results from the original, contaminated set and the cleaned set are never comparable to each other.</li>
+      <li><strong>Explainability is heuristic and structurally unverifiable against ground truth.</strong> The heatmap-to-region bridge maps Grad-CAM activations to a lesion focus/boundary call using brightness segmentation, not annotated lesion masks &mdash; and annotated masks are a deliberate non-goal, not a backlog item. So the explanation output is advisory evidence of where the model looked, never proof it looked at the lesion itself.</li>
+      <li><strong>Safety-critical scope gating depends on self-reported patient input.</strong> The Fitzpatrick IV&ndash;VI gate &mdash; the thing that makes the model&rsquo;s accuracy claims apply at all &mdash; relies on the patient truthfully reporting their skin type, with no image-based verification. Every downstream guarantee is conditional on that input being honest.</li>
+    </ul>
+  </section>
+
+  <section class="writeup-section">
+    <h2>Links</h2>
+    <p>Repo: this repository (branch <code>ijist-paper</code>)</p>
+    <p>Demo: not yet deployed</p>
+  </section>
+</div>
+
+</body>
+</html>
