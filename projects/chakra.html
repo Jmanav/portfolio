@@ -14,26 +14,92 @@
 
   <header class="writeup-header">
     <h1>CHAKRA</h1>
-    <p class="writeup-subtitle">Critical Infra Risk Engine &mdash; a risk-scoring platform for Indian smart-city critical infrastructure.</p>
+    <p class="writeup-subtitle">Cyber-Risk Engine for a Simulated Smart City &mdash; built and shipped an end-to-end cyber-risk ranking system for critical infrastructure (power, water, telecom, hospitals, transport), from threat-feed ingestion through a Monte Carlo attack/cascade engine to a FastAPI backend and React dashboard, containerized and deployed live.</p>
   </header>
 
   <section class="writeup-section">
-    <h2>Overview</h2>
-    <p>A risk-scoring platform for Indian smart-city critical infrastructure (power, water, health, telecom, traffic). Given a synthetic 90-asset city, it computes which compromised asset would do the most damage, runs a 24h cascading-failure simulation, ranks fixes by risk removed per hour of effort, and replays real ICS telemetry (HAI, MSU/ORNL) through trained models to move live risk scores.</p>
-    <p>A pure-Python Monte Carlo risk engine (test-oracle validated, zero ML imports by architectural rule) is fed likelihood ratios from three independently gated models &mdash; IsolationForest anomaly detection, a RandomForest attack-vs-fault classifier, and an XGBoost CVE-exploitability model &mdash; each only used if it clears a precommitted held-out metric gate. Every number the API returns carries a provenance badge (FEED / MODEL / GRAPH / ASSUMPTION / SYNTHETIC), enforced by a middleware test so no unbadged number can leave the system &mdash; the project is structurally incapable of showing a fabricated or LLM-hallucinated number as data. An optional LLM narrates results but never computes them; any number it states that isn't in the source facts is stripped before display.</p>
-    <p>Shipped as a single offline-capable Docker container (boots and serves with <code>--network none</code>) with a React/TypeScript dashboard, FastAPI backend, and CI enforcing architecture boundaries, mypy --strict, and determinism on every commit.</p>
-    <p><a href="https://dvd1906-cityrisk.hf.space" target="_blank" rel="noopener noreferrer">Live demo &rarr;</a></p>
+    <h2>Live Demo</h2>
+    <p><a href="https://dvd1906-cityrisk.hf.space" target="_blank" rel="noopener noreferrer">dvd1906-cityrisk.hf.space</a> &mdash; Hugging Face Space (sleeps after 48h idle; first request after a restart is slower).</p>
+    <p>Try: open the City map, run &ldquo;Run the attack&rdquo; on a flagged asset, then switch to Live detection to watch a replayed HAI/MSU telemetry feed shift the live threat level in real time.</p>
   </section>
 
   <section class="writeup-section">
-    <h2>Stack</h2>
-    <p class="tag-row">
-      <span class="tag">FastAPI</span>
-      <span class="tag">Monte Carlo Simulation</span>
-      <span class="tag">XGBoost / scikit-learn</span>
-      <span class="tag">React + TypeScript</span>
-      <span class="tag">Docker</span>
-    </p>
+    <h2>Stages</h2>
+
+    <h3>1. Ingestion</h3>
+    <ul>
+      <li>Feed scripts (<code>feeds/</code>) fetch CISA KEV, FIRST EPSS, NVD and MITRE ATT&amp;CK for ICS at dev time only, cached to <code>data/feeds/</code> with a manifest (url, sha256, fetch date) &mdash; zero network calls at runtime.</li>
+      <li>A seeded generator (<code>generator/build_city.py</code>) builds a synthetic 90-asset city (RFC1918 addresses only, no scanning) with deterministic output: same seed &rarr; byte-identical city.</li>
+    </ul>
+
+    <h3>2. Processing</h3>
+    <ul>
+      <li>Assets, vulnerabilities and telemetry enter through three fixed seams (<code>CityState.from_records</code>, <code>generator/vulns.py</code>, <code>ml/replay.py</code>), so a new data source plugs in without touching engine code.</li>
+      <li>Two models (anomaly detector on HAI water-treatment telemetry, Random Forest on MSU/ORNL grid telemetry) convert recorded readings into likelihood-ratio evidence via a shared lookup table (<code>engine/lr.py</code>), gated by held-out metrics before either can emit a <code>MODEL</code>-badged number.</li>
+    </ul>
+
+    <h3>3. Core system</h3>
+    <ul>
+      <li>A pure-Python engine (<code>engine/</code>, zero imports from the API/web/ML layers) runs Monte Carlo attack simulation over the network graph, then a 24-hour time-stepped dependency cascade to compute person-hours of service lost.</li>
+      <li>Risk ranking uses marginal gateway value <code>G(a) = CHAKRA &minus; CHAKRA(a uncompromisable)</code> with common random numbers, not CVSS score or summed per-asset risk &mdash; this is what lets the planner outperform a CVSS-first remediation order (99.9% vs 41.4% of modelled risk removed in the demo profile).</li>
+    </ul>
+
+    <h3>4. Evaluation / explainability</h3>
+    <ul>
+      <li>Every number returned by the API or shown in the UI carries a provenance badge (<code>FEED</code>, <code>MODEL</code>, <code>GRAPH</code>, <code>ASSUMPTION</code>, or <code>SYNTHETIC</code>) naming its source &mdash; enforced by a test that walks every API response.</li>
+      <li>An optional LLM explainer (off by default) is template-first; when enabled, a validator strips any sentence containing a number not present in the engine&rsquo;s own output JSON, so the model can narrate but never invent a figure.</li>
+    </ul>
+
+    <h3>5. Output / delivery</h3>
+    <ul>
+      <li>FastAPI surface (<code>api/</code>) exposes assets, attack paths, cascades, uncertainty bands (P10/P50/P90), a remediation planner, live replay streaming (SSE), and an incident-report draft &mdash; all badge-walked and rate-limited.</li>
+      <li>A React + TypeScript dashboard (Vite, TanStack Query, Recharts) renders the city as an SVG map (no tile dependency), runs simulated attacks interactively, and shows a &ldquo;why&rdquo; chain per asset with zero client-side computation.</li>
+    </ul>
+
+    <h3>6. Deployment</h3>
+    <ul>
+      <li>Single Docker image: multi-stage build compiles the dashboard, precomputes caches at build time, and serves both API and static frontend from one uvicorn process on one port &mdash; verified to boot and serve with <code>--network none</code>.</li>
+      <li>Shipped to a public Hugging Face Space; CI runs lint, full test suite, and an offline boot test in Docker.</li>
+    </ul>
+  </section>
+
+  <section class="writeup-section">
+    <h2>Architecture</h2>
+    <p>Offline-first pipeline: dev-time feed caching &rarr; seeded generator &rarr; pure-Python scoring engine &rarr; FastAPI (badges everything) &rarr; React dashboard that only displays what the API returns.</p>
+    <p class="status-line">Architecture diagram not yet added here &mdash; see <code>docs/architecture.md</code> in the repo for the text version.</p>
+  </section>
+
+  <section class="writeup-section">
+    <h2>Tech Stack</h2>
+    <ul>
+      <li><strong>Language:</strong> Python 3.11, TypeScript</li>
+      <li><strong>Backend:</strong> FastAPI, Pydantic v2, uvicorn</li>
+      <li><strong>Engine:</strong> NumPy, SciPy, NetworkX, pandas, PyArrow</li>
+      <li><strong>ML:</strong> scikit-learn (Random Forest), Isolation Forest, XGBoost</li>
+      <li><strong>Frontend:</strong> React, Vite, TanStack Query, Recharts</li>
+      <li><strong>API contract:</strong> OpenAPI (generated client/types)</li>
+      <li><strong>LLM integration (optional):</strong> Anthropic Claude SDK, with output validation/grounding layer</li>
+      <li><strong>Containerization:</strong> Docker, Docker Compose</li>
+      <li><strong>Deployment:</strong> Hugging Face Spaces (Gradio host)</li>
+      <li><strong>Testing:</strong> pytest, mypy (strict), ruff, Vitest, Playwright (E2E)</li>
+      <li><strong>CI/CD:</strong> GitHub Actions</li>
+    </ul>
+  </section>
+
+  <section class="writeup-section">
+    <h2>Limitations</h2>
+    <ul>
+      <li><strong>Synthetic city only.</strong> All assets, addresses, and topology are generated; results describe this simulated city and its configured control strengths, not a real deployment.</li>
+      <li><strong>ML models trained on foreign testbeds.</strong> The water and power models were trained on public industrial datasets (HAI, MSU/ORNL), not on this synthetic city&rsquo;s own data &mdash; a deliberate choice to avoid training on self-generated labels, but it means domain transfer is unvalidated.</li>
+      <li><strong>No AND-preconditions in the attack model</strong> (OR-only in this version) and the cascade ignores partial degradation and repair crews.</li>
+      <li><strong>One known test gap:</strong> a replay-streaming test fails on Windows because it relies on a POSIX signal; unrelated to runtime behavior.</li>
+    </ul>
+  </section>
+
+  <section class="writeup-section">
+    <h2>Links</h2>
+    <p>Repo: this repository</p>
+    <p>Demo: <a href="https://dvd1906-cityrisk.hf.space" target="_blank" rel="noopener noreferrer">dvd1906-cityrisk.hf.space</a></p>
   </section>
 </div>
 
